@@ -1,5 +1,5 @@
-export const SUPABASE_URL = "SUPABASE_URL";
-export const SUPABASE_ANON_KEY = "SUPABASE_ANON_KEY";
+export const SUPABASE_URL = "https://reebavnvftfibyhhjxat.supabase.co";
+export const SUPABASE_ANON_KEY = "sb_publishable_WksWBZLsVc1f4JBmQiRK5A_6swUYr-Z";
 
 const configured = SUPABASE_URL.startsWith("https://") && SUPABASE_ANON_KEY.length > 40 && window.supabase;
 export const supabaseClient = configured ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }) : null;
