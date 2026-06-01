@@ -1,5 +1,25 @@
-import { isSupabaseConfigured, supabaseClient, getCurrentUser, signIn, signUp, resetPassword, signOut, upsertProfile } from "./supabase.js";
-import { baseline, classifyAdherence, classifyPain, formatDate, renderDashboard, statusText } from "./dashboard.js";
+import {
+  getRememberSession,
+  isSupabaseConfigured,
+  resetPassword,
+  setRememberSession,
+  signIn,
+  signOut,
+  signUp,
+  supabaseClient,
+  getCurrentUser,
+  upsertProfile
+} from "./supabase.js";
+import {
+  baseline,
+  classifyAdherence,
+  classifyPain,
+  formatDate,
+  journey,
+  renderDashboard,
+  statusText,
+  technicalSkills
+} from "./dashboard.js";
 
 const checklistItems = [
   ["gym_3x", "Academia mínimo 3x"],
@@ -19,34 +39,57 @@ const checklistItems = [
   ["adequate_recovery", "Recuperação adequada"]
 ];
 
-const storeKey = "performance-os-state";
+const preventionLibrary = [
+  ["Mobilidade", ["Ombro", "Escápula", "Coluna torácica", "Quadril", "Tornozelo"]],
+  ["Ativação Muscular", ["Manguito rotador", "Escápulas", "Core", "Glúteos", "Panturrilhas"]],
+  ["Preparação Específica para o Tênis", ["Split step", "Movimentação lateral", "Shadow forehand", "Shadow backhand", "Shadow serve", "Aceleração", "Mudança de direção"]]
+];
+
+const storeKey = "performance-os-state-v2";
 let currentUser = null;
-let state = loadLocalState();
+let state = emptyState();
 
 document.addEventListener("DOMContentLoaded", init);
-window.addEventListener("resize", () => renderAll());
+window.addEventListener("resize", debounce(() => renderAll(), 150));
 
 async function init() {
   buildChecklist();
+  buildSkillOptions();
+  buildPrepLibrary();
   wireNavigation();
   wireForms();
   setDefaultDates();
-  document.getElementById("auth-panel").classList.add("visible");
+  document.querySelector('[name="remember"]').checked = getRememberSession();
   document.getElementById("auth-mode-note").textContent = isSupabaseConfigured
-    ? "Supabase configurado. Use email e senha cadastrados no projeto wagner-performance-os."
-    : "Modo demo local ativo. Substitua SUPABASE_URL e SUPABASE_ANON_KEY em supabase.js para sincronizar.";
+    ? "Supabase configurado. Os registros serão salvos online após login."
+    : "Modo local. Configure Supabase para salvar online.";
+
+  await restoreSession();
+  renderAll();
+}
+
+async function restoreSession() {
+  showAuth(true);
   try {
     currentUser = await getCurrentUser();
     if (currentUser && isSupabaseConfigured) {
+      await ensureProfile();
       await loadRemoteState();
-      document.getElementById("auth-panel").classList.remove("visible");
+      showAuth(false);
+      setText("session-state", `Online · ${currentUser.email || "usuário"}`);
+      return;
     }
-    if (!isSupabaseConfigured) document.getElementById("auth-panel").classList.add("visible");
+    if (!isSupabaseConfigured) {
+      state = loadLocalState();
+      setText("session-state", "Modo local");
+    } else {
+      setText("session-state", "Faça login");
+    }
   } catch (error) {
-    document.getElementById("auth-panel").classList.add("visible");
-    notify(error.message);
+    showAuth(true);
+    setText("session-state", "Sessão expirada");
+    notify(`Sessão expirada ou ausente. Faça login novamente. ${error.message}`);
   }
-  renderAll();
 }
 
 function wireNavigation() {
@@ -67,45 +110,83 @@ function wireForms() {
     event.preventDefault();
     const form = event.target;
     try {
-      const data = await signIn(form.email.value, form.password.value);
+      setRememberSession(form.remember.checked);
+      const data = await signIn(form.email.value, form.password.value, form.remember.checked);
       currentUser = data.user || (await getCurrentUser());
       await ensureProfile(form.name.value);
-      if (isSupabaseConfigured) await loadRemoteState();
-      document.getElementById("auth-panel").classList.remove("visible");
+      await loadRemoteState();
+      showAuth(false);
       renderAll();
     } catch (error) {
       notify(error.message);
     }
   });
+
   document.getElementById("sign-up").addEventListener("click", async () => {
     const form = document.getElementById("auth-form");
     try {
-      const data = await signUp(form.email.value, form.password.value, form.name.value);
-      currentUser = data.user || { id: "demo-user", email: form.email.value };
+      setRememberSession(form.remember.checked);
+      const data = await signUp(form.email.value, form.password.value, form.name.value, form.remember.checked);
+      currentUser = data.user || (await getCurrentUser());
       await ensureProfile(form.name.value);
-      notify("Conta criada. Confirme o email se a confirmação estiver ativa no Supabase.");
+      await loadRemoteState();
+      showAuth(!currentUser);
+      notify("Conta criada. Se o Supabase exigir confirmação, valide o email antes do primeiro login.");
+      renderAll();
     } catch (error) {
       notify(error.message);
     }
   });
+
   document.getElementById("reset-password").addEventListener("click", async () => {
     const email = document.querySelector('[name="email"]').value;
     if (!email) return notify("Informe o email para recuperar a senha.");
-    await resetPassword(email);
-    notify("Se o email existir, o Supabase enviará o link de recuperação.");
+    try {
+      await resetPassword(email);
+      notify("Se o email existir, o Supabase enviará o link de recuperação.");
+    } catch (error) {
+      notify(error.message);
+    }
   });
+
   document.getElementById("sign-out").addEventListener("click", async () => {
     await signOut();
     currentUser = null;
-    document.getElementById("auth-panel").classList.add("visible");
+    state = emptyState();
+    showAuth(true);
+    setText("session-state", "Logout concluído");
+    renderAll();
+    window.scrollTo({ top: 0, behavior: "smooth" });
   });
+
+  bindForm("weekly-form", saveWeekly);
+  bindForm("tennis-form", saveTennis);
+  bindForm("shoulder-form", saveShoulder);
+  bindForm("body-form", saveBody);
+  bindForm("lesson-form", saveLesson);
+  bindForm("technical-form", saveTechnicalProgress);
   document.getElementById("weekly-form").addEventListener("change", updateWeeklyPreview);
-  document.getElementById("weekly-form").addEventListener("submit", saveWeekly);
-  document.getElementById("tennis-form").addEventListener("submit", saveTennis);
   document.getElementById("shoulder-form").addEventListener("change", updateShoulderPreview);
-  document.getElementById("shoulder-form").addEventListener("submit", saveShoulder);
-  document.getElementById("body-form").addEventListener("submit", saveBody);
-  document.getElementById("seed-demo").addEventListener("click", seedDemo);
+}
+
+function bindForm(id, handler) {
+  document.getElementById(id).addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      if (isSupabaseConfigured && !currentUser) {
+        showAuth(true);
+        return notify("Faça login para salvar online.");
+      }
+      await handler(event);
+    } catch (error) {
+      if (String(error.message).toLowerCase().includes("auth")) {
+        showAuth(true);
+        notify("Sessão expirada. Faça login novamente para continuar salvando online.");
+      } else {
+        notify(error.message);
+      }
+    }
+  });
 }
 
 function buildChecklist() {
@@ -118,27 +199,64 @@ function buildChecklist() {
   });
 }
 
+function buildSkillOptions() {
+  const select = document.getElementById("skill-select");
+  technicalSkills.forEach((skill) => {
+    const option = document.createElement("option");
+    option.value = skill;
+    option.textContent = skill;
+    select.appendChild(option);
+  });
+}
+
+function buildPrepLibrary() {
+  const container = document.getElementById("prep-library");
+  preventionLibrary.forEach(([title, items]) => {
+    const card = document.createElement("article");
+    card.className = "prep-card";
+    card.innerHTML = `<div class="media-slot">Imagem ou vídeo futuro</div><h4>${title}</h4><ul>${items.map((item) => `<li>${item}</li>`).join("")}</ul>`;
+    container.appendChild(card);
+  });
+}
+
 function setDefaultDates() {
   const today = new Date().toISOString().slice(0, 10);
   document.querySelectorAll('input[type="date"]').forEach((input) => { if (!input.value) input.value = today; });
+  document.querySelector('#weekly-form [name="week_start"]').value = "2026-06-01";
   updateWeeklyPreview();
   updateShoulderPreview();
 }
 
 async function ensureProfile(name) {
   if (!currentUser) return;
-  await upsertProfile({ id: currentUser.id, name: name || "Wagner Dias Junior", created_at: new Date().toISOString() });
+  await upsertProfile({
+    id: currentUser.id,
+    name: name || currentUser.user_metadata?.name || currentUser.email || "Wagner Dias Junior",
+    journey_start: "2026-06-01",
+    journey_end: "2026-08-31",
+    initial_ranking_position: journey.initialRanking,
+    initial_ranking_points: journey.initialPoints,
+    target_private_lessons: journey.targetLessons,
+    created_at: new Date().toISOString()
+  });
 }
 
 async function loadRemoteState() {
-  const tables = ["weekly_reviews", "weekly_checklist", "tennis_matches", "shoulder_tracking", "body_composition"];
+  const tables = ["weekly_reviews", "weekly_checklist", "tennis_matches", "shoulder_tracking", "body_composition", "technical_lessons", "technical_progress"];
   const results = await Promise.all(tables.map((table) => supabaseClient.from(table).select("*").order("created_at", { ascending: true })));
   results.forEach((result) => { if (result.error) throw result.error; });
-  state = { weekly_reviews: results[0].data, weekly_checklist: results[1].data, tennis_matches: results[2].data, shoulder_tracking: results[3].data, body_composition: results[4].data.length ? results[4].data : [baseline] };
+  state = {
+    weekly_reviews: results[0].data,
+    weekly_checklist: results[1].data,
+    tennis_matches: results[2].data,
+    shoulder_tracking: results[3].data,
+    body_composition: results[4].data.length ? results[4].data : [baseline],
+    technical_lessons: results[5].data,
+    technical_progress: results[6].data
+  };
 }
 
 async function saveWeekly(event) {
-  event.preventDefault();
   const form = event.target;
   const checklist = Object.fromEntries(checklistItems.map(([name]) => [name, form[name].checked]));
   const adherence = Math.round((Object.values(checklist).filter(Boolean).length / checklistItems.length) * 100);
@@ -154,29 +272,23 @@ async function saveWeekly(event) {
     main_learning: form.main_learning.value,
     next_week_focus: form.next_week_focus.value
   });
-  const savedReview = await insertRow("weekly_reviews", review);
-  const checklistRow = rowWithUser({ weekly_review_id: savedReview.id, ...checklist });
-  const savedChecklist = await insertRow("weekly_checklist", checklistRow);
-  state.weekly_reviews.push(savedReview);
-  state.weekly_checklist.push(savedChecklist);
-  persistAndRender();
-  form.reset();
-  setDefaultDates();
+  const savedReview = await upsertRow("weekly_reviews", review, "user_id,week_start");
+  const savedChecklist = await upsertRow("weekly_checklist", rowWithUser({ weekly_review_id: savedReview.id, ...checklist }), "weekly_review_id");
+  replaceByKey(state.weekly_reviews, savedReview, "id");
+  replaceByKey(state.weekly_checklist, savedChecklist, "weekly_review_id");
+  afterSave(form);
 }
 
 async function saveTennis(event) {
-  event.preventDefault();
   const form = event.target;
-  const previousTotal = state.tennis_matches.at(-1)?.total_points || 932;
-  const gained = Number(form.ranking_points.value || 0);
   const row = rowWithUser({
     match_date: form.match_date.value,
     opponent: form.opponent.value,
     score: form.score.value,
     result: form.result.value,
-    ranking_points: gained,
-    total_points: Number(form.total_points.value || previousTotal + (form.result.value === "win" ? gained : 0)),
-    ranking_position: Number(form.ranking_position.value),
+    ranking_points: Number(form.ranking_points.value || 0),
+    total_points: Number(form.total_points.value || journey.initialPoints),
+    ranking_position: Number(form.ranking_position.value || journey.initialRanking),
     forehand: Number(form.forehand.value),
     backhand: Number(form.backhand.value),
     serve: Number(form.serve.value),
@@ -187,27 +299,57 @@ async function saveTennis(event) {
     next_focus: form.next_focus.value
   });
   state.tennis_matches.push(await insertRow("tennis_matches", row));
-  persistAndRender();
-  form.reset();
-  setDefaultDates();
+  afterSave(form);
 }
 
 async function saveShoulder(event) {
-  event.preventDefault();
   const form = event.target;
   const maxPain = Math.max(Number(form.pain_rest.value), Number(form.pain_movement.value), Number(form.pain_serve.value));
-  const row = rowWithUser({ week_start: form.week_start.value, pain_rest: Number(form.pain_rest.value), pain_movement: Number(form.pain_movement.value), pain_serve: Number(form.pain_serve.value), status: statusText(classifyPain(maxPain)), notes: form.notes.value });
-  state.shoulder_tracking.push(await insertRow("shoulder_tracking", row));
-  persistAndRender();
+  const row = rowWithUser({
+    week_start: form.week_start.value,
+    pain_rest: Number(form.pain_rest.value),
+    pain_movement: Number(form.pain_movement.value),
+    pain_serve: Number(form.pain_serve.value),
+    status: statusText(classifyPain(maxPain)),
+    notes: form.notes.value
+  });
+  replaceByKey(state.shoulder_tracking, await upsertRow("shoulder_tracking", row, "user_id,week_start"), "week_start");
+  afterSave(form);
 }
 
 async function saveBody(event) {
-  event.preventDefault();
+  const raw = Object.fromEntries(new FormData(event.target).entries());
+  const row = rowWithUser({
+    assessment_date: raw.assessment_date,
+    weight: Number(raw.weight),
+    body_fat: Number(raw.body_fat),
+    muscle_mass: Number(raw.muscle_mass),
+    visceral_fat: Number(raw.visceral_fat),
+    inbody_score: Number(raw.inbody_score),
+    notes: raw.notes
+  });
+  replaceByKey(state.body_composition, await upsertRow("body_composition", row, "user_id,assessment_date"), "assessment_date");
+  afterSave(event.target);
+}
+
+async function saveLesson(event) {
   const form = event.target;
-  const raw = Object.fromEntries(new FormData(form).entries());
-  const row = rowWithUser({ assessment_date: raw.assessment_date, weight: Number(raw.weight), body_fat: Number(raw.body_fat), muscle_mass: Number(raw.muscle_mass), visceral_fat: Number(raw.visceral_fat), inbody_score: Number(raw.inbody_score), notes: raw.notes });
-  state.body_composition.push(await insertRow("body_composition", row));
-  persistAndRender();
+  const row = rowWithUser({ lesson_date: form.lesson_date.value, teacher: form.teacher.value, notes: form.notes.value });
+  state.technical_lessons.push(await insertRow("technical_lessons", row));
+  afterSave(form);
+}
+
+async function saveTechnicalProgress(event) {
+  const form = event.target;
+  const row = rowWithUser({
+    assessment_date: form.assessment_date.value,
+    skill: form.skill.value,
+    current_score: Number(form.current_score.value),
+    target_score: Number(form.target_score.value),
+    notes: form.notes.value
+  });
+  state.technical_progress.push(await insertRow("technical_progress", row));
+  afterSave(form);
 }
 
 async function insertRow(table, row) {
@@ -217,8 +359,22 @@ async function insertRow(table, row) {
   return data;
 }
 
+async function upsertRow(table, row, onConflict) {
+  if (!isSupabaseConfigured) return row;
+  const { data, error } = await supabaseClient.from(table).upsert(row, { onConflict }).select().single();
+  if (error) throw error;
+  return data;
+}
+
 function rowWithUser(row) {
   return { id: crypto.randomUUID(), user_id: currentUser?.id || "demo-user", created_at: new Date().toISOString(), ...row };
+}
+
+function afterSave(form) {
+  persistLocalIfNeeded();
+  renderAll();
+  form.reset();
+  setDefaultDates();
 }
 
 function updateWeeklyPreview() {
@@ -236,21 +392,28 @@ function updateShoulderPreview() {
 }
 
 function renderAll() {
-  state.weekly_reviews.sort((a, b) => a.week_start.localeCompare(b.week_start));
-  state.tennis_matches.sort((a, b) => a.match_date.localeCompare(b.match_date));
-  state.shoulder_tracking.sort((a, b) => a.week_start.localeCompare(b.week_start));
-  state.body_composition.sort((a, b) => a.assessment_date.localeCompare(b.assessment_date));
-  renderDashboard(state);
+  sortState();
+  renderDashboard(state, checklistItems);
   renderWeeklyList();
   renderTennisList();
+  renderLessons();
 }
 
 function renderWeeklyList() {
   const list = document.getElementById("weekly-list");
   list.innerHTML = "";
-  state.weekly_reviews.slice().reverse().forEach((week) => {
-    const status = classifyAdherence(Number(week.adherence_percent));
-    list.appendChild(card(`<div class="list-card-row"><strong>Semana de ${formatDate(week.week_start)}</strong><span class="status-pill status-${status}">${week.adherence_percent}%</span></div><p>${week.main_learning || "Sem aprendizado registrado."}</p><small>Próximo foco: ${week.next_week_focus || "definir na próxima revisão"}</small>`));
+  state.weekly_reviews.slice().reverse().forEach((week, index, all) => {
+    const checklist = state.weekly_checklist.find((item) => item.weekly_review_id === week.id);
+    const done = checklist ? checklistItems.filter(([key]) => checklist[key]).map(([, label]) => label) : [];
+    const missed = checklist ? checklistItems.filter(([key]) => !checklist[key]).map(([, label]) => label) : [];
+    const previous = all[index + 1];
+    const diff = previous ? Number(week.adherence_percent) - Number(previous.adherence_percent) : 0;
+    list.appendChild(card(`
+      <div class="list-card-row"><strong>Semana de ${formatDate(week.week_start)}</strong><span class="status-pill status-${classifyAdherence(Number(week.adherence_percent))}">${week.adherence_percent}%</span></div>
+      <p><strong>Realizado:</strong> ${done.slice(0, 6).join(", ") || "Sem itens marcados."}</p>
+      <p><strong>Não realizado:</strong> ${missed.slice(0, 6).join(", ") || "Nenhum gargalo nesta semana."}</p>
+      <small>${diff ? `Comparação: ${diff > 0 ? "+" : ""}${Math.round(diff)} p.p. vs semana anterior.` : "Primeira semana registrada."} Próximo foco: ${week.next_week_focus || "definir"}</small>
+    `));
   });
 }
 
@@ -258,7 +421,15 @@ function renderTennisList() {
   const list = document.getElementById("tennis-list");
   list.innerHTML = "";
   state.tennis_matches.slice().reverse().forEach((match) => {
-    list.appendChild(card(`<div class="list-card-row"><strong>${formatDate(match.match_date)} · ${match.opponent}</strong><span>${resultLabel(match.result)} · ${match.score || "-"}</span></div><p>FH ${match.forehand} · BH ${match.backhand} · Saque ${match.serve} · Mov ${match.movement} · Tática ${match.tactics}</p><small>Pontos totais: ${match.total_points || 932} · Ranking #${match.ranking_position || 2}</small>`));
+    list.appendChild(card(`<div class="list-card-row"><strong>${formatDate(match.match_date)} · ${match.opponent}</strong><span>#${match.ranking_position || journey.initialRanking}</span></div><p>${resultLabel(match.result)} · ${match.score || "-"} · ${match.ranking_points || 0} pts</p><small>FH ${match.forehand} · BH ${match.backhand} · Saque ${match.serve} · Mov ${match.movement} · Tática ${match.tactics}</small>`));
+  });
+}
+
+function renderLessons() {
+  const list = document.getElementById("lesson-list");
+  list.innerHTML = "";
+  state.technical_lessons.slice().reverse().forEach((lesson) => {
+    list.appendChild(card(`<div class="list-card-row"><strong>Aula em ${formatDate(lesson.lesson_date)}</strong><span>${lesson.teacher || "Professor"}</span></div><p>${lesson.notes || "Sem observações."}</p>`));
   });
 }
 
@@ -268,30 +439,63 @@ function card(html) {
   node.innerHTML = html;
   return node;
 }
-function resultLabel(result) { return { win: "Vitória", loss: "Derrota", cancelled: "Cancelado", wo: "W.O." }[result] || result; }
-function persistAndRender() { if (!isSupabaseConfigured) localStorage.setItem(storeKey, JSON.stringify(state)); renderAll(); }
+
+function showAuth(visible) {
+  document.getElementById("auth-panel").classList.toggle("visible", visible);
+}
+
+function persistLocalIfNeeded() {
+  if (!isSupabaseConfigured) localStorage.setItem(storeKey, JSON.stringify(state));
+}
+
 function loadLocalState() {
-  const empty = { weekly_reviews: [], weekly_checklist: [], tennis_matches: [], shoulder_tracking: [], body_composition: [baseline] };
-  try { return JSON.parse(localStorage.getItem(storeKey)) || empty; } catch { return empty; }
+  try { return JSON.parse(localStorage.getItem(storeKey)) || emptyState(); } catch { return emptyState(); }
 }
-function seedDemo() {
-  state = {
-    weekly_reviews: [
-      { id: "w1", week_start: "2026-06-01", adherence_percent: 86, weekly_score: 88, status: "Verde", sleep_hours_avg: 7.2, sleep_score_avg: 79, main_learning: "Boa consistência quando treino cedo.", next_week_focus: "Manter proteína e mobilidade." },
-      { id: "w2", week_start: "2026-06-08", adherence_percent: 73, weekly_score: 74, status: "Amarelo", sleep_hours_avg: 6.6, sleep_score_avg: 71, main_learning: "Viagem derrubou sono.", next_week_focus: "Plano mínimo de hotel." },
-      { id: "w3", week_start: "2026-06-15", adherence_percent: 87, weekly_score: 89, status: "Verde", sleep_hours_avg: 7.4, sleep_score_avg: 81, main_learning: "Aquecimento reduziu dor.", next_week_focus: "Backhand seguro cruzado." }
-    ],
+
+function emptyState() {
+  return {
+    weekly_reviews: [],
     weekly_checklist: [],
-    tennis_matches: [
-      { id: "t1", match_date: "2026-05-26", opponent: "Gabriel Benicio", score: "8/2", result: "win", ranking_points: 116, total_points: 1048, ranking_position: 2, forehand: 7, backhand: 6, serve: 6, movement: 8, tactics: 7 },
-      { id: "t2", match_date: "2026-06-10", opponent: "Arthur Carvalho", score: "8/5", result: "win", ranking_points: 100, total_points: 1148, ranking_position: 2, forehand: 8, backhand: 7, serve: 6, movement: 8, tactics: 8 }
-    ],
-    shoulder_tracking: [
-      { id: "s1", week_start: "2026-06-01", pain_rest: 1, pain_movement: 2, pain_serve: 3, status: "Amarelo", notes: "Evitar saque máximo." },
-      { id: "s2", week_start: "2026-06-08", pain_rest: 0, pain_movement: 1, pain_serve: 2, status: "Verde", notes: "Boa resposta a mobilidade." }
-    ],
-    body_composition: [baseline, { id: "b2", assessment_date: "2026-07-01", weight: 68.5, body_fat: 17.1, muscle_mass: 32.2, visceral_fat: 5, inbody_score: 81 }]
+    tennis_matches: [],
+    shoulder_tracking: [],
+    body_composition: [baseline],
+    technical_lessons: [],
+    technical_progress: []
   };
-  persistAndRender();
 }
-function notify(message) { window.alert(message); }
+
+function sortState() {
+  state.weekly_reviews.sort((a, b) => a.week_start.localeCompare(b.week_start));
+  state.tennis_matches.sort((a, b) => a.match_date.localeCompare(b.match_date));
+  state.shoulder_tracking.sort((a, b) => a.week_start.localeCompare(b.week_start));
+  state.body_composition.sort((a, b) => a.assessment_date.localeCompare(b.assessment_date));
+  state.technical_lessons.sort((a, b) => a.lesson_date.localeCompare(b.lesson_date));
+  state.technical_progress.sort((a, b) => a.assessment_date.localeCompare(b.assessment_date));
+}
+
+function replaceByKey(rows, row, key) {
+  const index = rows.findIndex((item) => item[key] === row[key]);
+  if (index >= 0) rows[index] = row;
+  else rows.push(row);
+}
+
+function resultLabel(result) {
+  return { win: "Vitória", loss: "Derrota", cancelled: "Cancelado", wo: "W.O." }[result] || result;
+}
+
+function notify(message) {
+  window.alert(message);
+}
+
+function setText(id, text) {
+  const node = document.getElementById(id);
+  if (node) node.textContent = text;
+}
+
+function debounce(fn, wait) {
+  let timeout;
+  return () => {
+    clearTimeout(timeout);
+    timeout = setTimeout(fn, wait);
+  };
+}
