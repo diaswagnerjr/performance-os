@@ -3,6 +3,11 @@ create extension if not exists pgcrypto;
 create table if not exists public.users_profile (
   id uuid primary key references auth.users(id) on delete cascade,
   name text not null,
+  journey_start date default date '2026-06-01',
+  journey_end date default date '2026-08-31',
+  initial_ranking_position integer default 2,
+  initial_ranking_points integer default 932,
+  target_private_lessons integer default 4,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -100,8 +105,32 @@ create table if not exists public.body_composition (
   unique (user_id, assessment_date)
 );
 
+create table if not exists public.technical_lessons (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  lesson_date date not null,
+  teacher text,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.technical_progress (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  assessment_date date not null,
+  skill text not null,
+  current_score numeric(4,2) not null check (current_score between 0 and 10),
+  target_score numeric(4,2) not null check (target_score between 0 and 10),
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create or replace function public.set_updated_at()
-returns trigger language plpgsql as $$
+returns trigger
+language plpgsql
+as $$
 begin
   new.updated_at = now();
   return new;
@@ -120,6 +149,10 @@ drop trigger if exists set_shoulder_tracking_updated_at on public.shoulder_track
 create trigger set_shoulder_tracking_updated_at before update on public.shoulder_tracking for each row execute function public.set_updated_at();
 drop trigger if exists set_body_composition_updated_at on public.body_composition;
 create trigger set_body_composition_updated_at before update on public.body_composition for each row execute function public.set_updated_at();
+drop trigger if exists set_technical_lessons_updated_at on public.technical_lessons;
+create trigger set_technical_lessons_updated_at before update on public.technical_lessons for each row execute function public.set_updated_at();
+drop trigger if exists set_technical_progress_updated_at on public.technical_progress;
+create trigger set_technical_progress_updated_at before update on public.technical_progress for each row execute function public.set_updated_at();
 
 alter table public.users_profile enable row level security;
 alter table public.weekly_reviews enable row level security;
@@ -127,31 +160,80 @@ alter table public.weekly_checklist enable row level security;
 alter table public.tennis_matches enable row level security;
 alter table public.shoulder_tracking enable row level security;
 alter table public.body_composition enable row level security;
+alter table public.technical_lessons enable row level security;
+alter table public.technical_progress enable row level security;
 
+drop policy if exists users_profile_select_own on public.users_profile;
 create policy users_profile_select_own on public.users_profile for select using (auth.uid() = id);
+drop policy if exists users_profile_insert_own on public.users_profile;
 create policy users_profile_insert_own on public.users_profile for insert with check (auth.uid() = id);
+drop policy if exists users_profile_update_own on public.users_profile;
 create policy users_profile_update_own on public.users_profile for update using (auth.uid() = id) with check (auth.uid() = id);
+drop policy if exists users_profile_delete_own on public.users_profile;
 create policy users_profile_delete_own on public.users_profile for delete using (auth.uid() = id);
+
+drop policy if exists weekly_reviews_select_own on public.weekly_reviews;
 create policy weekly_reviews_select_own on public.weekly_reviews for select using (auth.uid() = user_id);
+drop policy if exists weekly_reviews_insert_own on public.weekly_reviews;
 create policy weekly_reviews_insert_own on public.weekly_reviews for insert with check (auth.uid() = user_id);
+drop policy if exists weekly_reviews_update_own on public.weekly_reviews;
 create policy weekly_reviews_update_own on public.weekly_reviews for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists weekly_reviews_delete_own on public.weekly_reviews;
 create policy weekly_reviews_delete_own on public.weekly_reviews for delete using (auth.uid() = user_id);
+
+drop policy if exists weekly_checklist_select_own on public.weekly_checklist;
 create policy weekly_checklist_select_own on public.weekly_checklist for select using (auth.uid() = user_id);
+drop policy if exists weekly_checklist_insert_own on public.weekly_checklist;
 create policy weekly_checklist_insert_own on public.weekly_checklist for insert with check (auth.uid() = user_id);
+drop policy if exists weekly_checklist_update_own on public.weekly_checklist;
 create policy weekly_checklist_update_own on public.weekly_checklist for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists weekly_checklist_delete_own on public.weekly_checklist;
 create policy weekly_checklist_delete_own on public.weekly_checklist for delete using (auth.uid() = user_id);
+
+drop policy if exists tennis_matches_select_own on public.tennis_matches;
 create policy tennis_matches_select_own on public.tennis_matches for select using (auth.uid() = user_id);
+drop policy if exists tennis_matches_insert_own on public.tennis_matches;
 create policy tennis_matches_insert_own on public.tennis_matches for insert with check (auth.uid() = user_id);
+drop policy if exists tennis_matches_update_own on public.tennis_matches;
 create policy tennis_matches_update_own on public.tennis_matches for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists tennis_matches_delete_own on public.tennis_matches;
 create policy tennis_matches_delete_own on public.tennis_matches for delete using (auth.uid() = user_id);
+
+drop policy if exists shoulder_tracking_select_own on public.shoulder_tracking;
 create policy shoulder_tracking_select_own on public.shoulder_tracking for select using (auth.uid() = user_id);
+drop policy if exists shoulder_tracking_insert_own on public.shoulder_tracking;
 create policy shoulder_tracking_insert_own on public.shoulder_tracking for insert with check (auth.uid() = user_id);
+drop policy if exists shoulder_tracking_update_own on public.shoulder_tracking;
 create policy shoulder_tracking_update_own on public.shoulder_tracking for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists shoulder_tracking_delete_own on public.shoulder_tracking;
 create policy shoulder_tracking_delete_own on public.shoulder_tracking for delete using (auth.uid() = user_id);
+
+drop policy if exists body_composition_select_own on public.body_composition;
 create policy body_composition_select_own on public.body_composition for select using (auth.uid() = user_id);
+drop policy if exists body_composition_insert_own on public.body_composition;
 create policy body_composition_insert_own on public.body_composition for insert with check (auth.uid() = user_id);
+drop policy if exists body_composition_update_own on public.body_composition;
 create policy body_composition_update_own on public.body_composition for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists body_composition_delete_own on public.body_composition;
 create policy body_composition_delete_own on public.body_composition for delete using (auth.uid() = user_id);
+
+drop policy if exists technical_lessons_select_own on public.technical_lessons;
+create policy technical_lessons_select_own on public.technical_lessons for select using (auth.uid() = user_id);
+drop policy if exists technical_lessons_insert_own on public.technical_lessons;
+create policy technical_lessons_insert_own on public.technical_lessons for insert with check (auth.uid() = user_id);
+drop policy if exists technical_lessons_update_own on public.technical_lessons;
+create policy technical_lessons_update_own on public.technical_lessons for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists technical_lessons_delete_own on public.technical_lessons;
+create policy technical_lessons_delete_own on public.technical_lessons for delete using (auth.uid() = user_id);
+
+drop policy if exists technical_progress_select_own on public.technical_progress;
+create policy technical_progress_select_own on public.technical_progress for select using (auth.uid() = user_id);
+drop policy if exists technical_progress_insert_own on public.technical_progress;
+create policy technical_progress_insert_own on public.technical_progress for insert with check (auth.uid() = user_id);
+drop policy if exists technical_progress_update_own on public.technical_progress;
+create policy technical_progress_update_own on public.technical_progress for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists technical_progress_delete_own on public.technical_progress;
+create policy technical_progress_delete_own on public.technical_progress for delete using (auth.uid() = user_id);
 
 grant usage on schema public to anon, authenticated;
 grant select, insert, update, delete on all tables in schema public to authenticated;
