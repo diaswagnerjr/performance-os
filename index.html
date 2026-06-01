@@ -68,13 +68,13 @@
         </nav>
 
         <section class="tab-page active" id="tab-exec">
-          <div class="metric-grid" id="metric-grid"></div>
-          <div class="panel-grid">
-            <article class="panel"><div class="panel-header"><h3>Aderência</h3><span id="green-weeks">0 verdes</span></div><canvas id="adherence-chart" height="170"></canvas></article>
-            <article class="panel"><div class="panel-header"><h3>Ranking</h3><span id="ranking-trend">Meta top 3</span></div><canvas id="points-chart" height="170"></canvas></article>
-            <article class="panel"><div class="panel-header"><h3>Bioimpedância</h3><span>Peso e BF</span></div><canvas id="body-chart" height="170"></canvas></article>
-            <article class="panel"><div class="panel-header"><h3>Recuperação</h3><span>Ombro e sono</span></div><canvas id="recovery-chart" height="170"></canvas></article>
+          <div class="panel-grid dashboard-charts">
+            <article class="panel chart-card"><div class="panel-header"><h3>Aderência</h3><span id="green-weeks">0 verdes</span></div><canvas id="adherence-chart" height="96"></canvas></article>
+            <article class="panel chart-card"><div class="panel-header"><h3>Ranking</h3><span id="ranking-trend">Meta top 3</span></div><canvas id="points-chart" height="96"></canvas></article>
+            <article class="panel chart-card"><div class="panel-header"><h3>Bioimpedância</h3><span>Peso e BF</span></div><canvas id="body-chart" height="96"></canvas></article>
+            <article class="panel chart-card"><div class="panel-header"><h3>Recuperação</h3><span>Ombro e sono</span></div><canvas id="recovery-chart" height="96"></canvas></article>
           </div>
+          <div class="metric-grid" id="metric-grid"></div>
           <article class="panel">
             <div class="panel-header"><h3>Centro de comando</h3><span id="session-state">Supabase</span></div>
             <div class="command-grid">
@@ -165,6 +165,9 @@
           <article class="panel prep-hero">
             <div><span class="eyebrow">Biblioteca</span><h3>Prevenção e Preparação</h3><p class="muted">Estrutura pronta para imagens, vídeos e links por exercício. Use antes dos treinos e jogos.</p></div>
           </article>
+          <figure class="playbook-board">
+            <img id="playbook-board-image" alt="Playbook visual de aquecimento para tênis com mobilidade, ativação muscular e preparação específica" />
+          </figure>
           <div class="prep-grid" id="prep-library"></div>
         </section>
 
