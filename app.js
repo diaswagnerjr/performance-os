@@ -20,6 +20,7 @@ import {
   statusText,
   technicalSkills
 } from "./dashboard.js";
+import { preventionPlaybookImage } from "./prevention-image.js";
 
 const checklistItems = [
   ["gym_3x", "Academia mínimo 3x"],
@@ -40,9 +41,9 @@ const checklistItems = [
 ];
 
 const preventionLibrary = [
-  ["Mobilidade", ["Ombro", "Escápula", "Coluna torácica", "Quadril", "Tornozelo"]],
-  ["Ativação Muscular", ["Manguito rotador", "Escápulas", "Core", "Glúteos", "Panturrilhas"]],
-  ["Preparação Específica para o Tênis", ["Split step", "Movimentação lateral", "Shadow forehand", "Shadow backhand", "Shadow serve", "Aceleração", "Mudança de direção"]]
+  ["Mobilidade", "left center", ["Ombro", "Escápula", "Coluna torácica", "Quadril", "Tornozelo"]],
+  ["Ativação Muscular", "center center", ["Manguito rotador", "Escápulas", "Core", "Glúteos", "Panturrilhas"]],
+  ["Preparação Específica para o Tênis", "right center", ["Split step", "Movimentação lateral", "Shadow forehand", "Shadow backhand", "Shadow serve", "Aceleração", "Mudança de direção"]]
 ];
 
 const storeKey = "performance-os-state-v2";
@@ -210,11 +211,12 @@ function buildSkillOptions() {
 }
 
 function buildPrepLibrary() {
+  document.getElementById("playbook-board-image").src = preventionPlaybookImage;
   const container = document.getElementById("prep-library");
-  preventionLibrary.forEach(([title, items]) => {
+  preventionLibrary.forEach(([title, focus, items]) => {
     const card = document.createElement("article");
     card.className = "prep-card";
-    card.innerHTML = `<div class="media-slot">Imagem ou vídeo futuro</div><h4>${title}</h4><ul>${items.map((item) => `<li>${item}</li>`).join("")}</ul>`;
+    card.innerHTML = `<div class="media-slot visual"><img src="${preventionPlaybookImage}" alt="${title}" style="--focus:${focus}" /></div><h4>${title}</h4><ul>${items.map((item) => `<li>${item}</li>`).join("")}</ul>`;
     container.appendChild(card);
   });
 }
