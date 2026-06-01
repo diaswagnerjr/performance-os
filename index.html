@@ -1,13 +1,209 @@
 <!doctype html>
 <html lang="pt-BR">
-<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><meta name="theme-color" content="#061522"/><title>Performance OS</title><link rel="stylesheet" href="styles.css"/><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head>
-<body><div class="app-shell"><header class="topbar"><div><p class="eyebrow">Wagner Dias · 100 dias</p><h1>Performance OS</h1></div><div class="top-actions"><button class="icon-button" id="theme-toggle" type="button" title="Alternar tema">◐</button><button class="icon-button" id="sign-out" type="button" title="Sair">↗</button></div></header><main>
-<section class="auth-panel" id="auth-panel"><div><p class="eyebrow">Acesso seguro</p><h2>Entre no seu cockpit de ranking, corpo, sono e recuperação.</h2></div><form id="auth-form" class="auth-form"><label>Nome<input name="name" type="text" autocomplete="name" placeholder="Wagner Dias Junior"/></label><label>Email<input name="email" type="email" autocomplete="email" required placeholder="voce@email.com"/></label><label>Senha<input name="password" type="password" autocomplete="current-password" placeholder="mínimo 6 caracteres"/></label><div class="auth-actions"><button class="primary-button" type="submit">Entrar</button><button class="secondary-button" type="button" id="sign-up">Criar conta</button><button class="ghost-button" type="button" id="reset-password">Recuperar senha</button></div><p class="muted" id="auth-mode-note"></p></form></section>
-<section class="hero" id="dashboard"><div class="hero-copy"><p class="eyebrow">Junho · Julho · Agosto 2026</p><h2>Coach digital semanal para alta performance sustentável.</h2><div class="journey-meter"><div><span id="journey-day">Dia 1</span><strong id="journey-percent">0%</strong></div><progress id="journey-progress" max="100" value="0"></progress></div></div><div class="hero-card"><span class="status-pill status-green" id="overall-status">Verde</span><p>Média de aderência</p><strong id="avg-adherence">0%</strong><small id="trend-summary">Pronto para a primeira semana.</small></div></section>
-<nav class="tabbar"><button class="tab-button active" type="button" data-tab="exec">Dashboard</button><button class="tab-button" type="button" data-tab="weekly">Semana</button><button class="tab-button" type="button" data-tab="tennis">Tênis</button><button class="tab-button" type="button" data-tab="health">Saúde</button><button class="tab-button" type="button" data-tab="insights">Insights</button></nav>
-<section class="tab-page active" id="tab-exec"><div class="metric-grid" id="metric-grid"></div><div class="panel-grid"><article class="panel"><div class="panel-header"><h3>Aderência semanal</h3><span id="green-weeks">0 verdes</span></div><canvas id="adherence-chart" height="220"></canvas></article><article class="panel"><div class="panel-header"><h3>Ranking e pontos</h3><span>Meta top 3</span></div><canvas id="points-chart" height="220"></canvas></article><article class="panel"><div class="panel-header"><h3>Bioimpedância</h3><span>Atual x meta</span></div><canvas id="body-chart" height="220"></canvas></article><article class="panel"><div class="panel-header"><h3>Ombro e sono</h3><span>Recuperação</span></div><canvas id="recovery-chart" height="220"></canvas></article></div><article class="panel"><div class="panel-header"><h3>Centro de comando</h3><button class="secondary-button compact" type="button" id="seed-demo">Carregar exemplo</button></div><div class="command-grid"><div><span class="command-label">Ombro</span><strong id="shoulder-state">Sem dados</strong><p id="shoulder-note">Registre dor em repouso, movimento e saque.</p></div><div><span class="command-label">Sono</span><strong id="sleep-state">Sem dados</strong><p id="sleep-note">Meta: 7h+ e Sleep Score acima de 75.</p></div><div><span class="command-label">Bioimpedância</span><strong id="body-state">Baseline</strong><p id="body-note">Nova avaliação na última semana de agosto.</p></div></div></article></section>
-<section class="tab-page" id="tab-weekly"><form class="panel form-panel" id="weekly-form"><div class="panel-header"><h3>Review semanal</h3><span id="weekly-score-preview">0%</span></div><div class="form-grid"><label>Semana iniciada em<input name="week_start" type="date" required/></label><label>Nota da semana<input name="weekly_score" type="number" min="0" max="100" value="80"/></label><label>Horas médias de sono<input name="sleep_hours_avg" type="number" step="0.1" min="0" max="12" value="7"/></label><label>Sleep Score médio<input name="sleep_score_avg" type="number" min="0" max="100" value="75"/></label><label>Status<input name="status" readonly/></label></div><div class="checklist" id="weekly-checklist"></div><label>Principal evolução<textarea name="main_evolution" rows="2"></textarea></label><label>Principal dificuldade<textarea name="main_difficulty" rows="2"></textarea></label><label>Principal aprendizado<textarea name="main_learning" rows="2"></textarea></label><label>Foco da próxima semana<textarea name="next_week_focus" rows="2"></textarea></label><button class="primary-button" type="submit">Salvar semana</button></form><div class="list-stack" id="weekly-list"></div></section>
-<section class="tab-page" id="tab-tennis"><form class="panel form-panel" id="tennis-form"><div class="panel-header"><h3>Partida de tênis</h3><span>Escala 0-10</span></div><div class="form-grid"><label>Data<input name="match_date" type="date" required/></label><label>Adversário<input name="opponent" type="text" required placeholder="Nome do adversário"/></label><label>Placar<input name="score" type="text" placeholder="8/4"/></label><label>Resultado<select name="result"><option value="win">Vitória</option><option value="loss">Derrota</option><option value="cancelled">Cancelado</option><option value="wo">W.O.</option></select></label><label>Pontos ganhos<input name="ranking_points" type="number" value="116"/></label><label>Pontos totais após jogo<input name="total_points" type="number" value="932"/></label><label>Ranking após jogo<input name="ranking_position" type="number" min="1" value="2"/></label></div><div class="rating-grid"><label>Forehand<input name="forehand" type="range" min="0" max="10" value="7"/></label><label>Backhand<input name="backhand" type="range" min="0" max="10" value="7"/></label><label>Saque<input name="serve" type="range" min="0" max="10" value="6"/></label><label>Movimentação<input name="movement" type="range" min="0" max="10" value="7"/></label><label>Tática<input name="tactics" type="range" min="0" max="10" value="7"/></label></div><label>O que funcionou<textarea name="strengths" rows="2"></textarea></label><label>O que não funcionou<textarea name="weaknesses" rows="2"></textarea></label><label>Próximo foco técnico<textarea name="next_focus" rows="2"></textarea></label><button class="primary-button" type="submit">Salvar partida</button></form><div class="list-stack" id="tennis-list"></div></section>
-<section class="tab-page" id="tab-health"><div class="panel-grid"><form class="panel form-panel" id="shoulder-form"><div class="panel-header"><h3>Ombro direito</h3><span id="shoulder-preview">Verde</span></div><div class="form-grid"><label>Semana<input name="week_start" type="date" required/></label><label>Dor em repouso<input name="pain_rest" type="number" min="0" max="10" value="0"/></label><label>Dor em movimento<input name="pain_movement" type="number" min="0" max="10" value="0"/></label><label>Dor no saque<input name="pain_serve" type="number" min="0" max="10" value="0"/></label></div><label>Notas<textarea name="notes" rows="3"></textarea></label><button class="primary-button" type="submit">Salvar ombro</button></form><form class="panel form-panel" id="body-form"><div class="panel-header"><h3>Bioimpedância</h3><span>Baseline 12/05/2026</span></div><div class="form-grid"><label>Data<input name="assessment_date" type="date" required/></label><label>Peso kg<input name="weight" type="number" step="0.1" value="69.4"/></label><label>BF %<input name="body_fat" type="number" step="0.1" value="18.5"/></label><label>Massa muscular kg<input name="muscle_mass" type="number" step="0.1" value="32.1"/></label><label>Gordura visceral<input name="visceral_fat" type="number" value="5"/></label><label>InBody Score<input name="inbody_score" type="number" value="79"/></label></div><label>Notas<textarea name="notes" rows="2"></textarea></label><button class="primary-button" type="submit">Salvar avaliação</button></form></div><article class="panel"><div class="panel-header"><h3>Distância até a meta</h3><span>Última medição</span></div><div class="body-targets" id="body-targets"></div></article></section>
-<section class="tab-page" id="tab-insights"><article class="panel"><div class="panel-header"><h3>Insights automáticos</h3><span>Coach baseado em métricas</span></div><div class="insight-list" id="insight-list"></div></article></section>
-</main></div><template id="metric-template"><article class="metric-card"><span></span><strong></strong><small></small></article></template><script type="module" src="app.js"></script></body></html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#071421" />
+    <title>Performance OS</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <span>Wagner Dias · Jornada 01/06 a 31/08/2026</span>
+          <strong>Performance OS</strong>
+        </div>
+        <div class="top-actions">
+          <button class="icon-button" id="theme-toggle" type="button" title="Alternar tema" aria-label="Alternar tema">◐</button>
+          <button class="secondary-button compact" id="sign-out" type="button">Sair</button>
+        </div>
+      </header>
+
+      <main>
+        <section class="auth-panel" id="auth-panel">
+          <div>
+            <span class="eyebrow">Acesso seguro</span>
+            <h1>Entre para salvar sua jornada online.</h1>
+          </div>
+          <form id="auth-form" class="auth-form">
+            <label>Nome<input name="name" type="text" autocomplete="name" placeholder="Wagner Dias Junior" /></label>
+            <label>Email<input name="email" type="email" autocomplete="email" required placeholder="voce@email.com" /></label>
+            <label>Senha<input name="password" type="password" autocomplete="current-password" placeholder="mínimo 6 caracteres" /></label>
+            <label class="inline-check"><input name="remember" type="checkbox" checked /> <span>Lembrar-me neste dispositivo</span></label>
+            <div class="auth-actions">
+              <button class="primary-button" type="submit">Entrar</button>
+              <button class="secondary-button" type="button" id="sign-up">Criar conta</button>
+              <button class="ghost-button" type="button" id="reset-password">Recuperar senha</button>
+            </div>
+            <p class="muted" id="auth-mode-note"></p>
+          </form>
+        </section>
+
+        <section class="summary">
+          <div>
+            <span class="eyebrow">Sistema operacional pessoal</span>
+            <h2>Coach semanal para tênis, corpo, sono e prevenção.</h2>
+          </div>
+          <div class="journey-meter">
+            <div><span id="journey-day">Dia 1</span><strong id="journey-percent">0%</strong></div>
+            <progress id="journey-progress" max="100" value="0"></progress>
+          </div>
+          <div class="status-block">
+            <span class="status-pill status-green" id="overall-status">Verde</span>
+            <strong id="avg-adherence">0%</strong>
+            <small id="trend-summary">Semanas ainda não registradas.</small>
+          </div>
+        </section>
+
+        <nav class="tabbar" aria-label="Navegação principal">
+          <button class="tab-button active" type="button" data-tab="exec">Dashboard</button>
+          <button class="tab-button" type="button" data-tab="weekly">Semanas</button>
+          <button class="tab-button" type="button" data-tab="tennis">Tênis</button>
+          <button class="tab-button" type="button" data-tab="tech">Técnica</button>
+          <button class="tab-button" type="button" data-tab="prep">Prevenção</button>
+          <button class="tab-button" type="button" data-tab="health">Saúde</button>
+          <button class="tab-button" type="button" data-tab="insights">Insights</button>
+        </nav>
+
+        <section class="tab-page active" id="tab-exec">
+          <div class="metric-grid" id="metric-grid"></div>
+          <div class="panel-grid">
+            <article class="panel"><div class="panel-header"><h3>Aderência</h3><span id="green-weeks">0 verdes</span></div><canvas id="adherence-chart" height="170"></canvas></article>
+            <article class="panel"><div class="panel-header"><h3>Ranking</h3><span id="ranking-trend">Meta top 3</span></div><canvas id="points-chart" height="170"></canvas></article>
+            <article class="panel"><div class="panel-header"><h3>Bioimpedância</h3><span>Peso e BF</span></div><canvas id="body-chart" height="170"></canvas></article>
+            <article class="panel"><div class="panel-header"><h3>Recuperação</h3><span>Ombro e sono</span></div><canvas id="recovery-chart" height="170"></canvas></article>
+          </div>
+          <article class="panel">
+            <div class="panel-header"><h3>Centro de comando</h3><span id="session-state">Supabase</span></div>
+            <div class="command-grid">
+              <div><span class="command-label">Ombro</span><strong id="shoulder-state">Sem dados</strong><p id="shoulder-note"></p></div>
+              <div><span class="command-label">Sono</span><strong id="sleep-state">Sem dados</strong><p id="sleep-note"></p></div>
+              <div><span class="command-label">Aulas</span><strong id="lesson-state">0/4</strong><p>Meta: até 4 aulas particulares no ciclo.</p></div>
+            </div>
+          </article>
+        </section>
+
+        <section class="tab-page" id="tab-weekly">
+          <form class="panel form-panel" id="weekly-form">
+            <div class="panel-header"><h3>Review semanal</h3><span id="weekly-score-preview">0%</span></div>
+            <div class="form-grid">
+              <label>Semana iniciada em<input name="week_start" type="date" required /></label>
+              <label>Nota da semana<input name="weekly_score" type="number" min="0" max="100" value="80" /></label>
+              <label>Horas médias de sono<input name="sleep_hours_avg" type="number" step="0.1" min="0" max="12" value="7" /></label>
+              <label>Sleep Score médio<input name="sleep_score_avg" type="number" min="0" max="100" value="75" /></label>
+              <label>Status<input name="status" readonly /></label>
+            </div>
+            <div class="checklist" id="weekly-checklist"></div>
+            <label>Principal evolução<textarea name="main_evolution" rows="2"></textarea></label>
+            <label>Principal dificuldade<textarea name="main_difficulty" rows="2"></textarea></label>
+            <label>Principal aprendizado<textarea name="main_learning" rows="2"></textarea></label>
+            <label>Foco da próxima semana<textarea name="next_week_focus" rows="2"></textarea></label>
+            <button class="primary-button" type="submit">Salvar semana</button>
+          </form>
+          <article class="panel"><div class="panel-header"><h3>Análise semanal</h3><span>Gargalos e padrões</span></div><div class="analysis-grid" id="weekly-analysis"></div></article>
+          <div class="list-stack" id="weekly-list"></div>
+        </section>
+
+        <section class="tab-page" id="tab-tennis">
+          <form class="panel form-panel" id="tennis-form">
+            <div class="panel-header"><h3>Partida de tênis</h3><span>Ranking e técnica</span></div>
+            <div class="form-grid">
+              <label>Data<input name="match_date" type="date" required /></label>
+              <label>Adversário<input name="opponent" type="text" required /></label>
+              <label>Placar<input name="score" type="text" placeholder="8/4" /></label>
+              <label>Resultado<select name="result"><option value="win">Vitória</option><option value="loss">Derrota</option><option value="cancelled">Cancelado</option><option value="wo">W.O.</option></select></label>
+              <label>Pontos ganhos<input name="ranking_points" type="number" value="0" /></label>
+              <label>Pontos totais<input name="total_points" type="number" value="932" /></label>
+              <label>Ranking após jogo<input name="ranking_position" type="number" min="1" value="2" /></label>
+            </div>
+            <div class="rating-grid">
+              <label>Forehand<input name="forehand" type="range" min="0" max="10" value="7" /></label>
+              <label>Backhand<input name="backhand" type="range" min="0" max="10" value="7" /></label>
+              <label>Saque<input name="serve" type="range" min="0" max="10" value="6" /></label>
+              <label>Movimentação<input name="movement" type="range" min="0" max="10" value="7" /></label>
+              <label>Tática<input name="tactics" type="range" min="0" max="10" value="7" /></label>
+            </div>
+            <label>O que funcionou<textarea name="strengths" rows="2"></textarea></label>
+            <label>O que não funcionou<textarea name="weaknesses" rows="2"></textarea></label>
+            <label>Próximo foco técnico<textarea name="next_focus" rows="2"></textarea></label>
+            <button class="primary-button" type="submit">Salvar partida</button>
+          </form>
+          <article class="panel"><div class="panel-header"><h3>Evolução no ranking</h3><span id="ranking-summary">Inicial #2</span></div><div class="body-targets" id="ranking-targets"></div></article>
+          <div class="list-stack" id="tennis-list"></div>
+        </section>
+
+        <section class="tab-page" id="tab-tech">
+          <div class="panel-grid">
+            <form class="panel form-panel" id="lesson-form">
+              <div class="panel-header"><h3>Aula particular</h3><span id="lesson-counter">0/4</span></div>
+              <div class="form-grid">
+                <label>Data da aula<input name="lesson_date" type="date" required /></label>
+                <label>Professor<input name="teacher" type="text" placeholder="Nome do professor" /></label>
+              </div>
+              <label>Observações<textarea name="notes" rows="3"></textarea></label>
+              <button class="primary-button" type="submit">Salvar aula</button>
+            </form>
+            <form class="panel form-panel" id="technical-form">
+              <div class="panel-header"><h3>Checklist técnico</h3><span>0-10</span></div>
+              <div class="form-grid">
+                <label>Data<input name="assessment_date" type="date" required /></label>
+                <label>Fundamento<select name="skill" id="skill-select"></select></label>
+                <label>Nota atual<input name="current_score" type="number" min="0" max="10" step="0.1" value="6" /></label>
+                <label>Meta desejada<input name="target_score" type="number" min="0" max="10" step="0.1" value="8" /></label>
+              </div>
+              <label>Notas<textarea name="notes" rows="2"></textarea></label>
+              <button class="primary-button" type="submit">Salvar evolução</button>
+            </form>
+          </div>
+          <article class="panel"><div class="panel-header"><h3>Plano de Evolução Técnica</h3><span>Aulas + fundamentos</span></div><div class="analysis-grid" id="technical-analysis"></div></article>
+          <div class="list-stack" id="lesson-list"></div>
+        </section>
+
+        <section class="tab-page" id="tab-prep">
+          <article class="panel prep-hero">
+            <div><span class="eyebrow">Biblioteca</span><h3>Prevenção e Preparação</h3><p class="muted">Estrutura pronta para imagens, vídeos e links por exercício. Use antes dos treinos e jogos.</p></div>
+          </article>
+          <div class="prep-grid" id="prep-library"></div>
+        </section>
+
+        <section class="tab-page" id="tab-health">
+          <div class="panel-grid">
+            <form class="panel form-panel" id="shoulder-form">
+              <div class="panel-header"><h3>Ombro direito</h3><span id="shoulder-preview">Verde</span></div>
+              <div class="form-grid">
+                <label>Semana<input name="week_start" type="date" required /></label>
+                <label>Dor repouso<input name="pain_rest" type="number" min="0" max="10" value="0" /></label>
+                <label>Dor movimento<input name="pain_movement" type="number" min="0" max="10" value="0" /></label>
+                <label>Dor saque<input name="pain_serve" type="number" min="0" max="10" value="0" /></label>
+              </div>
+              <label>Notas<textarea name="notes" rows="3"></textarea></label>
+              <button class="primary-button" type="submit">Salvar ombro</button>
+            </form>
+            <form class="panel form-panel" id="body-form">
+              <div class="panel-header"><h3>Bioimpedância</h3><span>Baseline 12/05/2026</span></div>
+              <div class="form-grid">
+                <label>Data<input name="assessment_date" type="date" required /></label>
+                <label>Peso kg<input name="weight" type="number" step="0.1" value="69.4" /></label>
+                <label>BF %<input name="body_fat" type="number" step="0.1" value="18.5" /></label>
+                <label>Massa muscular kg<input name="muscle_mass" type="number" step="0.1" value="32.1" /></label>
+                <label>Gordura visceral<input name="visceral_fat" type="number" value="5" /></label>
+                <label>InBody Score<input name="inbody_score" type="number" value="79" /></label>
+              </div>
+              <label>Notas<textarea name="notes" rows="2"></textarea></label>
+              <button class="primary-button" type="submit">Salvar avaliação</button>
+            </form>
+          </div>
+          <article class="panel"><div class="panel-header"><h3>Distância até a meta</h3><span>Última medição</span></div><div class="body-targets" id="body-targets"></div></article>
+        </section>
+
+        <section class="tab-page" id="tab-insights">
+          <article class="panel"><div class="panel-header"><h3>Insights automáticos</h3><span>Coach digital</span></div><div class="insight-list" id="insight-list"></div></article>
+        </section>
+      </main>
+    </div>
+    <template id="metric-template"><article class="metric-card"><span></span><strong></strong><small></small></article></template>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
