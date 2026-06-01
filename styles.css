@@ -72,16 +72,22 @@ progress::-webkit-progress-value { background: var(--green); border-radius: 99px
 .tab-page { display: none; }
 .tab-page.active { display: grid; gap: 12px; }
 
-.metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .metric-card, .panel, .list-card, .prep-card, .target-row, .analysis-card { border: 1px solid var(--line); border-radius: var(--radius); }
-.metric-card { display: grid; gap: 6px; min-height: 92px; padding: 12px; background: rgba(255,255,255,.05); }
+.metric-card { display: grid; gap: 4px; min-height: 70px; padding: 9px; background: rgba(255,255,255,.05); }
 .metric-card span { color: var(--muted); font-size: .75rem; }
-.metric-card strong { font-size: 1.25rem; line-height: 1.1; }
+.metric-card strong { font-size: 1.05rem; line-height: 1.08; }
+.metric-card small { font-size: .72rem; line-height: 1.2; }
 .panel { display: grid; gap: 12px; padding: 14px; overflow: hidden; }
 .panel-grid { display: grid; gap: 12px; }
 .panel-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .panel-header span { color: var(--muted); font-size: .8rem; text-align: right; }
 canvas { width: 100%; max-width: 100%; height: 170px; display: block; }
+.dashboard-charts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.chart-card { gap: 8px; padding: 10px; }
+.chart-card .panel-header { display: grid; gap: 2px; }
+.chart-card .panel-header span { text-align: left; font-size: .72rem; }
+.chart-card canvas { height: 96px; }
 
 .form-grid, .rating-grid, .checklist, .command-grid, .analysis-grid, .prep-grid, .body-targets, .list-stack, .insight-list { display: grid; gap: 10px; }
 label { display: grid; gap: 6px; color: var(--muted); font-size: .82rem; font-weight: 700; }
@@ -103,6 +109,10 @@ input[type="range"] { padding: 0; accent-color: var(--green); }
 .prep-card h4 { margin: 0; color: var(--text); }
 .prep-card ul { margin: 0; padding-left: 18px; color: var(--muted); }
 .media-slot { min-height: 70px; display: grid; place-items: center; border: 1px dashed var(--line); border-radius: var(--radius); color: var(--muted); font-size: .78rem; background: rgba(255,255,255,.03); }
+.media-slot.visual { min-height: 118px; overflow: hidden; border-style: solid; padding: 0; background: #fff; }
+.media-slot.visual img { width: 100%; height: 100%; object-fit: cover; object-position: var(--focus, center); display: block; }
+.playbook-board { margin: 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: rgba(255,255,255,.04); }
+.playbook-board img { display: block; width: 100%; max-height: 520px; object-fit: contain; background: #071421; }
 
 body.light { color-scheme: light; --bg: #f6f8fb; --surface: #fff; --surface-2: #e8f0f6; --line: rgba(7,20,33,.13); --text: #071421; --muted: #596b78; --shadow: 0 14px 34px rgba(25,45,65,.12); background: linear-gradient(145deg, #f8fbff, #eef7f3); }
 body.light .topbar, body.light .summary, body.light .panel, body.light .auth-panel { background: rgba(255,255,255,.94); }
@@ -114,6 +124,8 @@ body.light .topbar, body.light .summary, body.light .panel, body.light .auth-pan
   .secondary-button.compact { font-size: .78rem; padding-inline: 8px; }
   .summary { padding: 14px; }
   .metric-grid { grid-template-columns: 1fr 1fr; }
+  .metric-card { min-height: 64px; padding: 8px; }
+  .metric-card strong { font-size: .98rem; }
   .panel { padding: 12px; }
   .panel-header { align-items: start; }
   .list-card-row, .target-head { grid-template-columns: 1fr; }
@@ -124,6 +136,7 @@ body.light .topbar, body.light .summary, body.light .panel, body.light .auth-pan
   .summary { grid-template-columns: 1.3fr .9fr .6fr; align-items: end; }
   .metric-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .panel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-charts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .rating-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .checklist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
