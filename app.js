@@ -14,7 +14,9 @@ import {
   baseline,
   classifyAdherence,
   classifyPain,
+  computeCurrentRankingPoints,
   formatDate,
+  buildRankingProgress,
   journey,
   renderDashboard,
   statusText,
@@ -168,6 +170,7 @@ function wireForms() {
   bindForm("technical-form", saveTechnicalProgress);
   document.getElementById("weekly-form").addEventListener("change", updateWeeklyPreview);
   document.getElementById("shoulder-form").addEventListener("change", updateShoulderPreview);
+  document.querySelector('#tennis-form [name="ranking_points"]').addEventListener("input", syncTennisPointsPreview);
 }
 
 function bindForm(id, handler) {
@@ -227,6 +230,7 @@ function setDefaultDates() {
   document.querySelector('#weekly-form [name="week_start"]').value = "2026-06-01";
   updateWeeklyPreview();
   updateShoulderPreview();
+  syncTennisPointsPreview();
 }
 
 async function ensureProfile(name) {
@@ -283,13 +287,15 @@ async function saveWeekly(event) {
 
 async function saveTennis(event) {
   const form = event.target;
+  const rankingPoints = Number(form.ranking_points.value || 0);
+  const totalPoints = computeCurrentRankingPoints(state.tennis_matches) + rankingPoints;
   const row = rowWithUser({
     match_date: form.match_date.value,
     opponent: form.opponent.value,
     score: form.score.value,
     result: form.result.value,
-    ranking_points: Number(form.ranking_points.value || 0),
-    total_points: Number(form.total_points.value || journey.initialPoints),
+    ranking_points: rankingPoints,
+    total_points: totalPoints,
     ranking_position: Number(form.ranking_position.value || journey.initialRanking),
     forehand: Number(form.forehand.value),
     backhand: Number(form.backhand.value),
@@ -393,11 +399,19 @@ function updateShoulderPreview() {
   document.getElementById("shoulder-preview").textContent = statusText(classifyPain(maxPain));
 }
 
+function syncTennisPointsPreview() {
+  const form = document.getElementById("tennis-form");
+  if (!form) return;
+  const rankingPoints = Number(form.ranking_points.value || 0);
+  form.total_points.value = computeCurrentRankingPoints(state.tennis_matches) + rankingPoints;
+}
+
 function renderAll() {
   sortState();
   renderDashboard(state, checklistItems);
   renderWeeklyList();
   renderTennisList();
+  renderShoulderList();
   renderLessons();
 }
 
@@ -422,8 +436,27 @@ function renderWeeklyList() {
 function renderTennisList() {
   const list = document.getElementById("tennis-list");
   list.innerHTML = "";
-  state.tennis_matches.slice().reverse().forEach((match) => {
-    list.appendChild(card(`<div class="list-card-row"><strong>${formatDate(match.match_date)} · ${match.opponent}</strong><span>#${match.ranking_position || journey.initialRanking}</span></div><p>${resultLabel(match.result)} · ${match.score || "-"} · ${match.ranking_points || 0} pts</p><small>FH ${match.forehand} · BH ${match.backhand} · Saque ${match.serve} · Mov ${match.movement} · Tática ${match.tactics}</small>`));
+  buildRankingProgress(state.tennis_matches).reverse().forEach((match) => {
+    list.appendChild(card(`<div class="list-card-row"><strong>${formatDate(match.match_date)} · ${match.opponent}</strong><span>#${match.ranking_position || journey.initialRanking}</span></div><p>${resultLabel(match.result)} · ${match.score || "-"} · ${match.ranking_points || 0} pts ganhos · total ${match.computed_total_points}</p><small>FH ${match.forehand} · BH ${match.backhand} · Saque ${match.serve} · Mov ${match.movement} · Tática ${match.tactics}</small>`));
+  });
+}
+
+function renderShoulderList() {
+  const list = document.getElementById("shoulder-list");
+  if (!list) return;
+  list.innerHTML = "";
+  if (!state.shoulder_tracking.length) {
+    list.appendChild(card("<p>Sem registros de ombro ainda.</p>"));
+    return;
+  }
+  state.shoulder_tracking.slice().reverse().forEach((row) => {
+    const maxPain = Math.max(Number(row.pain_rest || 0), Number(row.pain_movement || 0), Number(row.pain_serve || 0));
+    const status = row.status || statusText(classifyPain(maxPain));
+    list.appendChild(card(`
+      <div class="list-card-row"><strong>Semana de ${formatDate(row.week_start)}</strong><span class="status-pill status-${classifyPain(maxPain)}">${status}</span></div>
+      <p>Repouso ${row.pain_rest || 0}/10 · Movimento ${row.pain_movement || 0}/10 · Saque ${row.pain_serve || 0}/10</p>
+      <small>${row.notes || "Sem observações."}</small>
+    `));
   });
 }
 

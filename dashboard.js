@@ -60,6 +60,8 @@ export function renderDashboard(state, checklistItems) {
   const latestMatch = matches.at(-1);
   const currentRanking = Number(latestMatch?.ranking_position || journey.initialRanking);
   const rankingDelta = journey.initialRanking - currentRanking;
+  const currentPoints = computeCurrentRankingPoints(matches);
+  const pointsDeltaPercent = ((currentPoints - journey.initialPoints) / journey.initialPoints) * 100;
   const sleepScoreAvg = avg(weeks.map((week) => week.sleep_score_avg));
   const sleepHoursAvg = avg(weeks.map((week) => week.sleep_hours_avg));
   const latestShoulder = shoulder.at(-1);
@@ -85,7 +87,7 @@ export function renderDashboard(state, checklistItems) {
   renderMetrics([
     ["Semanas", String(weeks.length), `${Math.round((weeks.length / journey.totalWeeks) * 100)}% do ciclo`],
     ["Ranking", `#${currentRanking}`, rankingDelta > 0 ? `+${rankingDelta} posições` : rankingDelta < 0 ? `${rankingDelta} posições` : "Sem variação"],
-    ["Pontos", String(latestMatch?.total_points || journey.initialPoints), "Baseline: 932"],
+    ["Pontos", String(currentPoints), `${pointsDeltaPercent >= 0 ? "+" : ""}${pointsDeltaPercent.toFixed(1)}% vs baseline`],
     ["Aulas", `${lessons.length}/4`, "Meta do ciclo"],
     ["Peso", `${Number(body.weight).toFixed(1)} kg`, "Meta: 67-68 kg"],
     ["BF", `${Number(body.body_fat).toFixed(1)}%`, "Meta: 15-16%"],
@@ -110,7 +112,7 @@ export function renderDashboard(state, checklistItems) {
   ]);
 
   renderBodyTargets(body);
-  renderRankingTargets(matches);
+  renderRankingTargets(matches, currentPoints, pointsDeltaPercent);
   renderWeeklyAnalysis(state, checklistItems);
   renderTechnicalAnalysis(state);
   renderInsights(state, checklistItems);
@@ -142,14 +144,28 @@ function renderBodyTargets(body) {
   });
 }
 
-function renderRankingTargets(matches) {
+function renderRankingTargets(matches, currentPoints, pointsDeltaPercent) {
   const container = document.getElementById("ranking-targets");
   const latest = matches.at(-1);
   const current = Number(latest?.ranking_position || journey.initialRanking);
   const delta = journey.initialRanking - current;
   container.innerHTML = "";
   container.appendChild(targetRow("Posição atual", `#${current}`, delta > 0 ? `Subiu ${delta} posição(ões)` : delta < 0 ? `Caiu ${Math.abs(delta)} posição(ões)` : "Estável", current <= 3 ? 100 : 35));
-  container.appendChild(targetRow("Pontos", String(latest?.total_points || journey.initialPoints), "Histórico registrado nas partidas", matches.length ? 70 : 0));
+  container.appendChild(targetRow("Pontos", String(currentPoints), `${pointsDeltaPercent >= 0 ? "+" : ""}${pointsDeltaPercent.toFixed(1)}% desde 932`, matches.length ? 70 : 0));
+}
+
+export function computeCurrentRankingPoints(matches) {
+  return journey.initialPoints + (matches || []).reduce((total, match) => total + Number(match.ranking_points || 0), 0);
+}
+
+export function buildRankingProgress(matches) {
+  let runningTotal = journey.initialPoints;
+  return [...(matches || [])]
+    .sort((a, b) => `${a.match_date || ""}${a.created_at || ""}`.localeCompare(`${b.match_date || ""}${b.created_at || ""}`))
+    .map((match) => {
+      runningTotal += Number(match.ranking_points || 0);
+      return { ...match, computed_total_points: runningTotal };
+    });
 }
 
 export function renderWeeklyAnalysis(state, checklistItems) {

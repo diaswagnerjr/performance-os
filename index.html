@@ -115,7 +115,7 @@
               <label>Placar<input name="score" type="text" placeholder="8/4" /></label>
               <label>Resultado<select name="result"><option value="win">Vitória</option><option value="loss">Derrota</option><option value="cancelled">Cancelado</option><option value="wo">W.O.</option></select></label>
               <label>Pontos ganhos<input name="ranking_points" type="number" value="0" /></label>
-              <label>Pontos totais<input name="total_points" type="number" value="932" /></label>
+              <label>Pontos totais após jogo<input name="total_points" type="number" value="932" readonly /></label>
               <label>Ranking após jogo<input name="ranking_position" type="number" min="1" value="2" /></label>
             </div>
             <div class="rating-grid">
@@ -198,6 +198,7 @@
               <button class="primary-button" type="submit">Salvar avaliação</button>
             </form>
           </div>
+          <article class="panel"><div class="panel-header"><h3>Histórico do ombro</h3><span>Semanas registradas</span></div><div class="list-stack" id="shoulder-list"></div></article>
           <article class="panel"><div class="panel-header"><h3>Distância até a meta</h3><span>Última medição</span></div><div class="body-targets" id="body-targets"></div></article>
         </section>
 
