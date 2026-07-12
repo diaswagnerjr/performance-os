@@ -51,6 +51,7 @@ const preventionLibrary = [
 const storeKey = "performance-os-state-v2";
 let currentUser = null;
 let state = emptyState();
+let editingWeeklyId = null;
 
 document.addEventListener("DOMContentLoaded", init);
 window.addEventListener("resize", debounce(() => renderAll(), 150));
@@ -169,6 +170,8 @@ function wireForms() {
   bindForm("lesson-form", saveLesson);
   bindForm("technical-form", saveTechnicalProgress);
   document.getElementById("weekly-form").addEventListener("change", updateWeeklyPreview);
+  document.getElementById("weekly-list").addEventListener("click", handleWeeklyListClick);
+  document.getElementById("weekly-cancel-edit").addEventListener("click", cancelWeeklyEdit);
   document.getElementById("shoulder-form").addEventListener("change", updateShoulderPreview);
   document.querySelector('#tennis-form [name="ranking_points"]').addEventListener("input", syncTennisPointsPreview);
 }
@@ -266,7 +269,7 @@ async function saveWeekly(event) {
   const form = event.target;
   const checklist = Object.fromEntries(checklistItems.map(([name]) => [name, form[name].checked]));
   const adherence = Math.round((Object.values(checklist).filter(Boolean).length / checklistItems.length) * 100);
-  const review = rowWithUser({
+  const reviewData = {
     week_start: form.week_start.value,
     adherence_percent: adherence,
     status: statusText(classifyAdherence(adherence)),
@@ -277,11 +280,17 @@ async function saveWeekly(event) {
     main_difficulty: form.main_difficulty.value,
     main_learning: form.main_learning.value,
     next_week_focus: form.next_week_focus.value
-  });
-  const savedReview = await upsertRow("weekly_reviews", review, "user_id,week_start");
-  const savedChecklist = await upsertRow("weekly_checklist", rowWithUser({ weekly_review_id: savedReview.id, ...checklist }), "weekly_review_id");
+  };
+  const savedReview = editingWeeklyId
+    ? await updateRow("weekly_reviews", editingWeeklyId, rowForUser(reviewData))
+    : await upsertRow("weekly_reviews", rowWithUser(reviewData), "user_id,week_start");
+  const currentChecklist = state.weekly_checklist.find((item) => item.weekly_review_id === savedReview.id);
+  const checklistData = { weekly_review_id: savedReview.id, ...checklist };
+  const savedChecklist = currentChecklist
+    ? await updateRow("weekly_checklist", currentChecklist.id, rowForUser(checklistData))
+    : await upsertRow("weekly_checklist", rowWithUser(checklistData), "weekly_review_id");
   replaceByKey(state.weekly_reviews, savedReview, "id");
-  replaceByKey(state.weekly_checklist, savedChecklist, "weekly_review_id");
+  replaceByKey(state.weekly_checklist, savedChecklist, "id");
   afterSave(form);
 }
 
@@ -374,14 +383,32 @@ async function upsertRow(table, row, onConflict) {
   return data;
 }
 
+async function updateRow(table, id, row) {
+  if (!isSupabaseConfigured) return { id, ...row };
+  const { data, error } = await supabaseClient.from(table).update(row).eq("id", id).select().single();
+  if (error) throw error;
+  return data;
+}
+
+async function deleteRow(table, id) {
+  if (!isSupabaseConfigured) return;
+  const { error } = await supabaseClient.from(table).delete().eq("id", id);
+  if (error) throw error;
+}
+
 function rowWithUser(row) {
-  return { id: crypto.randomUUID(), user_id: currentUser?.id || "demo-user", created_at: new Date().toISOString(), ...row };
+  return { id: crypto.randomUUID(), created_at: new Date().toISOString(), ...rowForUser(row) };
+}
+
+function rowForUser(row) {
+  return { user_id: currentUser?.id || "demo-user", updated_at: new Date().toISOString(), ...row };
 }
 
 function afterSave(form) {
   persistLocalIfNeeded();
   renderAll();
   form.reset();
+  if (form.id === "weekly-form") resetWeeklyEditor();
   setDefaultDates();
 }
 
@@ -429,8 +456,88 @@ function renderWeeklyList() {
       <p><strong>Realizado:</strong> ${done.slice(0, 6).join(", ") || "Sem itens marcados."}</p>
       <p><strong>Não realizado:</strong> ${missed.slice(0, 6).join(", ") || "Nenhum gargalo nesta semana."}</p>
       <small>${diff ? `Comparação: ${diff > 0 ? "+" : ""}${Math.round(diff)} p.p. vs semana anterior.` : "Primeira semana registrada."} Próximo foco: ${week.next_week_focus || "definir"}</small>
+      <details class="week-details">
+        <summary>Ver anotações e checklist completo</summary>
+        <div class="week-notes">
+          <p><strong>Evolução:</strong> ${escapeHtml(week.main_evolution || "Sem anotação.")}</p>
+          <p><strong>Dificuldade:</strong> ${escapeHtml(week.main_difficulty || "Sem anotação.")}</p>
+          <p><strong>Aprendizado:</strong> ${escapeHtml(week.main_learning || "Sem anotação.")}</p>
+          <p><strong>Foco:</strong> ${escapeHtml(week.next_week_focus || "Sem anotação.")}</p>
+          <small><strong>Checklist feito:</strong> ${escapeHtml(done.join(", ") || "Nenhum item marcado.")}</small>
+          <small><strong>Checklist pendente:</strong> ${escapeHtml(missed.join(", ") || "Nenhum item pendente.")}</small>
+        </div>
+      </details>
+      <div class="record-actions">
+        <button class="secondary-button compact" type="button" data-week-action="edit" data-week-id="${week.id}">Editar</button>
+        <button class="ghost-button compact" type="button" data-week-action="delete" data-week-id="${week.id}">Excluir</button>
+      </div>
     `));
   });
+}
+
+async function handleWeeklyListClick(event) {
+  const button = event.target.closest("[data-week-action]");
+  if (!button) return;
+  const id = button.dataset.weekId;
+  if (button.dataset.weekAction === "edit") {
+    beginWeeklyEdit(id);
+    return;
+  }
+  if (button.dataset.weekAction === "delete") {
+    await deleteWeeklyReview(id);
+  }
+}
+
+function beginWeeklyEdit(id) {
+  const week = state.weekly_reviews.find((item) => item.id === id);
+  if (!week) return notify("Não encontrei essa semana para editar.");
+  const checklist = state.weekly_checklist.find((item) => item.weekly_review_id === week.id);
+  const form = document.getElementById("weekly-form");
+  editingWeeklyId = id;
+  form.week_start.value = week.week_start;
+  form.weekly_score.value = week.weekly_score ?? 80;
+  form.sleep_hours_avg.value = week.sleep_hours_avg ?? 7;
+  form.sleep_score_avg.value = week.sleep_score_avg ?? 75;
+  form.main_evolution.value = week.main_evolution || "";
+  form.main_difficulty.value = week.main_difficulty || "";
+  form.main_learning.value = week.main_learning || "";
+  form.next_week_focus.value = week.next_week_focus || "";
+  checklistItems.forEach(([name]) => { form[name].checked = Boolean(checklist?.[name]); });
+  document.getElementById("weekly-submit").textContent = "Salvar edição";
+  document.getElementById("weekly-cancel-edit").hidden = false;
+  updateWeeklyPreview();
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function deleteWeeklyReview(id) {
+  const week = state.weekly_reviews.find((item) => item.id === id);
+  if (!week) return notify("Não encontrei essa semana para excluir.");
+  const ok = window.confirm(`Excluir a semana de ${formatDate(week.week_start)}? O dashboard será recalculado sem esse registro.`);
+  if (!ok) return;
+  try {
+    await deleteRow("weekly_reviews", id);
+    state.weekly_reviews = state.weekly_reviews.filter((item) => item.id !== id);
+    state.weekly_checklist = state.weekly_checklist.filter((item) => item.weekly_review_id !== id);
+    if (editingWeeklyId === id) cancelWeeklyEdit();
+    persistLocalIfNeeded();
+    renderAll();
+    notify("Semana excluída. O dashboard já foi recalculado.");
+  } catch (error) {
+    notify(error.message);
+  }
+}
+
+function cancelWeeklyEdit() {
+  const form = document.getElementById("weekly-form");
+  form.reset();
+  resetWeeklyEditor();
+  setDefaultDates();
+}
+
+function resetWeeklyEditor() {
+  editingWeeklyId = null;
+  document.getElementById("weekly-submit").textContent = "Salvar semana";
+  document.getElementById("weekly-cancel-edit").hidden = true;
 }
 
 function renderTennisList() {
@@ -525,6 +632,15 @@ function notify(message) {
 function setText(id, text) {
   const node = document.getElementById(id);
   if (node) node.textContent = text;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function debounce(fn, wait) {
