@@ -100,7 +100,10 @@
             <label>Principal dificuldade<textarea name="main_difficulty" rows="2"></textarea></label>
             <label>Principal aprendizado<textarea name="main_learning" rows="2"></textarea></label>
             <label>Foco da próxima semana<textarea name="next_week_focus" rows="2"></textarea></label>
-            <button class="primary-button" type="submit">Salvar semana</button>
+            <div class="form-actions">
+              <button class="primary-button" id="weekly-submit" type="submit">Salvar semana</button>
+              <button class="secondary-button" id="weekly-cancel-edit" type="button" hidden>Cancelar edição</button>
+            </div>
           </form>
           <article class="panel"><div class="panel-header"><h3>Análise semanal</h3><span>Gargalos e padrões</span></div><div class="analysis-grid" id="weekly-analysis"></div></article>
           <div class="list-stack" id="weekly-list"></div>
