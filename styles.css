@@ -32,7 +32,7 @@ h3 { font-size: 1rem; }
 .brand { display: grid; gap: 4px; }
 .brand span, .eyebrow, .command-label { color: var(--blue); font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .brand strong { font-size: clamp(1.2rem, 5vw, 1.8rem); }
-.top-actions, .auth-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.top-actions, .auth-actions, .form-actions, .record-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 
 .icon-button, .tab-button, .secondary-button, .primary-button, .ghost-button {
   border: 1px solid var(--line);
@@ -101,6 +101,9 @@ input[type="range"] { padding: 0; accent-color: var(--green); }
 .command-grid > div { border-left: 3px solid var(--blue); padding-left: 10px; }
 .list-card, .analysis-card, .prep-card, .target-row { display: grid; gap: 8px; padding: 12px; background: rgba(255,255,255,.045); }
 .list-card-row, .target-head { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start; }
+.week-details { display: grid; gap: 8px; color: var(--muted); }
+.week-details summary { color: var(--blue); cursor: pointer; font-weight: 800; }
+.week-notes { display: grid; gap: 6px; }
 .target-row progress { grid-column: 1 / -1; }
 .insight { padding: 12px; border-radius: var(--radius); background: rgba(255,255,255,.05); border-left: 4px solid var(--green); }
 
